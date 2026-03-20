@@ -1,5 +1,6 @@
 ﻿namespace exam_Ef_dapper_14_3.Interfaces;
 
+using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.models;
 
 public interface IBookRepository
@@ -10,5 +11,5 @@ public interface IBookRepository
     Task UpdateBookAsync(Book book);
     Task DeleteBookAsync(int id);
 
-    IEnumerable<dynamic> GetBooksDapper();
+    Task<IEnumerable<BookDto>> GetBooksDapperAsync();
 }

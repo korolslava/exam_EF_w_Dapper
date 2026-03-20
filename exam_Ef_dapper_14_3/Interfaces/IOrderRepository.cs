@@ -1,5 +1,6 @@
 ﻿namespace exam_Ef_dapper_14_3.Interfaces;
 
+using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.models;
 
 public interface IOrderRepository
@@ -8,5 +9,5 @@ public interface IOrderRepository
     Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync();
     Task DeleteOrderAsync(int id);
 
-    IEnumerable<dynamic> GetOrderReportDapper();
+    Task<IEnumerable<OrderReportDto>> GetOrderReportDapperAsync();
 }
