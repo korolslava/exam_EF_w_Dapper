@@ -4,72 +4,178 @@
 ![EF Core](https://img.shields.io/badge/ORM-EF%20Core-blue)
 ![Dapper](https://img.shields.io/badge/Micro--ORM-Dapper-green)
 ![SQL Server](https://img.shields.io/badge/DB-SQL%20Server-red)
+![xUnit](https://img.shields.io/badge/Tests-xUnit-brightgreen)
+![Docker](https://img.shields.io/badge/Container-Docker-2496ED)
 
 ## 📖 Overview
-A professional-grade console application designed to automate bookstore operations. This project demonstrates a hybrid data access strategy, leveraging **Entity Framework Core** for complex business logic and state management, alongside **Dapper** for high-performance read-only queries and analytical reporting.
 
-## 🏗️ Architecture: Repository Pattern
-To ensure scalability and maintainability, the project implements the **Repository Pattern**, achieving a clean **Separation of Concerns (SoC)**:
-- **Domain Layer**: Contains entity models and repository interfaces.
-- **Data Layer**: Manages the `DbContext`, Fluent API configurations, and repository implementations.
-- **App Layer**: Orchestrates services and business scenarios within the `Program.cs` entry point.
+A professional-grade console application designed to automate bookstore operations. This project demonstrates a production-ready architecture with a **Service Layer**, **Dependency Injection**, **FluentValidation**, and a hybrid data access strategy — leveraging **Entity Framework Core** for complex business logic and **Dapper** for high-performance analytical queries.
+
+The project is fully containerized with **Docker** and includes a comprehensive **unit test suite** (21 tests) to validate business logic in isolation.
+
+---
+
+## 🏗️ Architecture
+
+The project follows a clean layered architecture with strict **Separation of Concerns**:
+
+```
+Program.cs  →  Service Layer  →  Repository Layer  →  EF Core / Dapper  →  SQL Server
+```
+
+- **Models** — Domain entity classes (`Book`, `Author`, `Order`, `OrderItem`)
+- **DTOs** — Data Transfer Objects decoupled from persistence models (`BookDto`, `CreateBookDto`, `CreateOrderDto`, `OrderReportDto`)
+- **Interfaces** — Contracts for repositories and services (`IBookRepository`, `IBookService`, etc.)
+- **Repositories** — Data access implementations using EF Core and Dapper
+- **Services** — Business logic layer (`BookService`, `OrderService`)
+- **Validators** — Input validation via FluentValidation
+- **Tests** — Isolated unit tests using xUnit, Moq, and FluentAssertions
 
 ---
 
 ## 🛠️ Technology Stack
-- **Runtime:** .NET 10.0
-- **Database:** SQL Server (LocalDB)
-- **Data Access Layer:**
-  - **EF Core:** Handles CRUD operations, Fluent API configurations, Migrations, and Eager Loading (`Include`/`ThenInclude`).
-  - **Dapper:** Executes raw SQL for optimized reporting and lightweight data retrieval.
-- **Logging:** Integrated EF Core logging to monitor generated SQL commands in real-time.
+
+| Layer | Technology |
+|---|---|
+| Runtime | .NET 10.0 |
+| Database | SQL Server 2022 |
+| ORM | Entity Framework Core 10 |
+| Micro-ORM | Dapper |
+| DI Container | Microsoft.Extensions.DependencyInjection |
+| Validation | FluentValidation |
+| Logging | Microsoft.Extensions.Logging + Console |
+| Testing | xUnit v3, Moq, FluentAssertions |
+| Containerization | Docker + docker-compose |
 
 ---
 
 ## 📊 Database Design (Fluent API)
-The database schema is configured using **Fluent API** to enforce strict data integrity directly at the SQL Server level:
 
-### Entities & Constraints:
-- **Author**: Unique index on `FullName` (max length: 100).
-- **Book**: 
-  - `Price` — `decimal(10,2)` type with a Check Constraint: `Price > 0`.
-  - `StockQuantity` — Check Constraint: `StockQuantity >= 0`.
-  - Non-clustered index on `Title` for search optimization.
-- **Order**: Automatic timestamp generation using `GETDATE()`.
-- **OrderItem**: Composite Primary Key (`OrderId`, `BookId`) with a Check Constraint: `Quantity > 0`.
+The schema is configured via **Fluent API** to enforce data integrity at the SQL Server level:
 
-### Relationships:
-- **One-to-Many**: One Author → Many Books. Configured with `DeleteBehavior.Restrict` to prevent accidental data loss.
-- **Many-to-Many**: Orders ↔ Books via the `OrderItem` join table.
+### Entities & Constraints
+
+- **Author** — Unique index on `FullName` (max 100 chars)
+- **Book** — `decimal(10,2)` price with `CHECK (Price > 0)`, `CHECK (StockQuantity >= 0)`, non-clustered index on `Title`
+- **Order** — Auto timestamp via `GETDATE()`
+- **OrderItem** — Composite PK (`OrderId`, `BookId`) with `CHECK (Quantity > 0)`
+
+### Relationships
+
+- **One-to-Many**: Author → Books with `DeleteBehavior.Restrict`
+- **Many-to-Many**: Orders ↔ Books via `OrderItem` join table
 
 ---
 
 ## 📂 Project Structure
 
 ```
-BookstoreManagement/
-├── Interfaces/
-│   ├── IBookRepository.cs     # Contracts for Book-related operations
-│   └── IOrderRepository.cs    # Contracts for Orders and Reporting
+exam_Ef_dapper_14_3/
 ├── Data/
-│   ├── BookShopDbContext.cs   # Context configuration and Fluent API
-│   └── Repositories/          # Repository implementations (EF + Dapper)
-├── Models/                    # Domain entity models
-├── Migrations/                # EF Core migrations and schema history
-└── Program.cs                 # Application entry point & orchestration
+│   ├── BookShopDbContext.cs          # DbContext with Fluent API configuration
+│   └── DesignTimeDbContextFactory.cs # Factory for EF CLI migrations
+├── DTOs/
+│   ├── BookDto.cs
+│   ├── CreateBookDto.cs
+│   ├── CreateOrderDto.cs
+│   └── OrderReportDto.cs
+├── Interfaces/
+│   ├── IBookRepository.cs
+│   └── IOrderRepository.cs
+├── Migrations/                        # EF Core migration history
+├── Models/
+│   ├── Author.cs
+│   ├── Book.cs
+│   ├── Order.cs
+│   └── OrderItem.cs
+├── Repositories/
+│   ├── BookRepository.cs             # EF Core + Dapper hybrid
+│   └── OrderRepository.cs           # EF Core + Dapper hybrid
+├── Services/
+│   ├── IBookService.cs
+│   ├── BookService.cs
+│   ├── IOrderService.cs
+│   └── OrderService.cs
+├── Validators/
+│   ├── CreateBookDtoValidator.cs
+│   └── CreateOrderDtoValidator.cs
+├── appsettings.Development.json       # Local connection string (not in git)
+├── appsettings.Docker.json            # Docker connection string
+├── Dockerfile
+└── Program.cs                         # DI setup + demo scenarios
+
+BookstoreManagement.Tests/
+├── BookServiceTests.cs               # 11 unit tests for BookService
+└── OrderServiceTests.cs             # 10 unit tests for OrderService
 ```
 
 ---
 
-## 📝 Key Scenarios
+## 🧪 Unit Tests (21 tests)
 
-### EF Core (Business Logic)
+Tests are fully isolated — repositories are mocked with **Moq**, assertions use **FluentAssertions**.
 
-* **Create:** Add authors, books, and multi-item orders (transactional flows).
-* **Read:** Fetch books with related authors using `.Include()` and `.ThenInclude()`.
-* **Update / Delete:** Update prices and stock, safely remove orders after validation.
+**BookService (11 tests):**
+- Create book with new author
+- Reuse existing author instead of creating duplicate
+- Reject negative / zero price
+- Reject negative stock
+- Verify `AddBookAsync` called exactly once
+- Update price — valid and invalid cases
+- Delete book with active orders → blocked
+- Delete book with no orders → succeeds
+
+**OrderService (10 tests):**
+- Place order → correct email returned
+- Place order → stock decremented
+- Insufficient stock → exception
+- Non-existent book → exception
+- Empty email / empty items / zero quantity → validation exceptions
+- Cancel order → stock restored
+- Cancel non-existent order → exception
+- Cancel order → `DeleteOrderAsync` called once
+
+Run tests:
+```bash
+cd BookstoreManagement.Tests
+dotnet run
+```
+
+---
+
+## 📝 Key Scenarios (Program.cs)
+
+### EF Core (Business Logic via Service Layer)
+- **Scenario 1** — Create a book (author dedup logic, FluentValidation, stock check)
+- **Scenario 2** — Retrieve all books with eager loading (`Include` / `ThenInclude`)
+- **Scenario 4** — Place a transactional order (stock decrement, rollback on failure)
 
 ### Dapper (High-Speed Analytics)
+- **Scenario 3** — Lightweight book list with author name (raw SQL join)
+- **Scenario 5** — Order analytics report with `SUM(Quantity * Price)` aggregation
 
-* Retrieve lightweight Book DTOs (Id, Title, Price) for fast UI lists or reports.
-* Complex multi-table join reports for analytics and exports.
+---
+
+## 🐳 Running with Docker
+
+No local SQL Server required. Docker Compose spins up SQL Server 2022 and the app together:
+
+```bash
+docker-compose up --build
+```
+
+The app automatically applies EF Core migrations on startup (`db.Database.Migrate()`), creates the database, and runs all demo scenarios.
+
+---
+
+## 🚀 Running Locally
+
+1. Update `appsettings.Development.json` with your local SQL Server connection string
+2. Apply migrations:
+```bash
+dotnet ef database update
+```
+3. Run the app:
+```bash
+dotnet run
+```
