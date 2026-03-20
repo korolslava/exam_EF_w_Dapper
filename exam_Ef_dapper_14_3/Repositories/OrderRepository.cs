@@ -1,6 +1,7 @@
 ﻿namespace exam_Ef_dapper_14_3.Repositories;
 
 using exam_Ef_dapper_14_3.data;
+using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.models;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,9 @@ using Dapper;
 public class OrderRepository : IOrderRepository
 {
     private readonly BookShopDbContext _context;
-    public OrderRepository(BookShopDbContext context)
-    {
-        _context = context;
-    }
+
+    public OrderRepository(BookShopDbContext context) => _context = context;
+
     public async Task AddOrderAsync(Order order, List<OrderItem> items)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -20,6 +20,7 @@ public class OrderRepository : IOrderRepository
         {
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
+
             foreach (var item in items)
             {
                 item.OrderId = order.Id;
@@ -34,32 +35,38 @@ public class OrderRepository : IOrderRepository
             throw;
         }
     }
-    public async Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync()
-    {
-        return await _context.Orders
+
+    public async Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync() =>
+        await _context.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Book)
                     .ThenInclude(b => b.Author)
             .ToListAsync();
-    }
+
     public async Task DeleteOrderAsync(int id)
     {
         var order = await _context.Orders.FindAsync(id);
-        if (order != null)
+        if (order is not null)
         {
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
         }
     }
-    public IEnumerable<dynamic> GetOrderReportDapper()
+
+    public async Task<IEnumerable<OrderReportDto>> GetOrderReportDapperAsync()
     {
-        using var connection = _context.Database.GetDbConnection();
-        string sql = "SELECT o.Id, o.CustomerEmail, o.CreatedAt, " +
-                     "SUM(oi.Quantity * b.Price) AS TotalAmount " +
-                     "FROM Orders o " +
-                     "JOIN OrderItems oi ON o.Id = oi.OrderId " +
-                     "JOIN Books b ON oi.BookId = b.Id " +
-                     "GROUP BY o.Id, o.CustomerEmail, o.CreatedAt";
-        return connection.Query(sql);
+        await using var connection = _context.Database.GetDbConnection();
+        const string sql = """
+            SELECT   o.Id,
+                     o.CustomerEmail,
+                     o.CreatedAt,
+                     SUM(oi.Quantity * b.Price) AS TotalAmount
+            FROM     Orders o
+            JOIN     OrderItems oi ON o.Id  = oi.OrderId
+            JOIN     Books b       ON oi.BookId = b.Id
+            GROUP BY o.Id, o.CustomerEmail, o.CreatedAt
+            ORDER BY o.CreatedAt DESC
+            """;
+        return await connection.QueryAsync<OrderReportDto>(sql);
     }
 }
