@@ -22,7 +22,8 @@ services.AddLogging(builder =>
     builder.SetMinimumLevel(LogLevel.Information);
 });
 
-services.AddDbContext<BookShopDbContext>(options =>
+services.AddDbContext<BookShopDbContext>(options => cd BookstoreManagement.Tests
+
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
            .LogTo(Console.WriteLine, LogLevel.Warning));
 
