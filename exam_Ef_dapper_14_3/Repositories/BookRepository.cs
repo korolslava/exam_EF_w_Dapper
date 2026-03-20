@@ -46,7 +46,10 @@ public class BookRepository : IBookRepository
 
     public async Task<IEnumerable<BookDto>> GetBooksDapperAsync()
     {
-        await using var connection = _context.Database.GetDbConnection();
+        var connection = _context.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await _context.Database.OpenConnectionAsync();
+
         const string sql = """
             SELECT b.Id, b.Title, b.Price, a.FullName AS AuthorName
             FROM   Books b

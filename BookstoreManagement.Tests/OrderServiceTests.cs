@@ -4,25 +4,32 @@ using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.models;
 using exam_Ef_dapper_14_3.Services;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
+using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace BookstoreManagement.Tests;
 
 public class OrderServiceTests
 {
-    private readonly Mock<IOrderRepository> _orderRepoMock;
-    private readonly Mock<IBookRepository> _bookRepoMock;
+    private readonly Mock<IOrderRepository> _orderRepoMock = new();
+    private readonly Mock<IBookRepository> _bookRepoMock = new();
+    private readonly Mock<IValidator<CreateOrderDto>> _validatorMock = new();
+    private readonly Mock<ILogger<OrderService>> _loggerMock = new();
     private readonly OrderService _sut;
 
     public OrderServiceTests()
     {
-        _orderRepoMock = new Mock<IOrderRepository>();
-        _bookRepoMock = new Mock<IBookRepository>();
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateOrderDto>(), default))
+            .ReturnsAsync(new ValidationResult());
+
         _sut = new OrderService(
             _orderRepoMock.Object,
             _bookRepoMock.Object,
-            NullLogger<OrderService>.Instance);
+            _validatorMock.Object,
+            _loggerMock.Object);
     }
 
     [Fact]

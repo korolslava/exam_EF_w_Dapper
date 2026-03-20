@@ -13,7 +13,10 @@ using exam_Ef_dapper_14_3.Validators;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile("appsettings.json", optional: true)
+    .AddJsonFile("appsettings.Development.json", optional: true)
+    .AddJsonFile("appsettings.Docker.json", optional: true)
+    .AddEnvironmentVariables()
     .Build();
 
 var services = new ServiceCollection();
@@ -28,8 +31,13 @@ services.AddScoped<IValidator<CreateBookDto>, CreateBookDtoValidator>();
 services.AddScoped<IValidator<CreateOrderDto>, CreateOrderDtoValidator>();
 
 services.AddDbContext<BookShopDbContext>(options =>
-    options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
-           .LogTo(Console.WriteLine, LogLevel.Warning));
+    options.UseSqlServer(
+        configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null))
+    .LogTo(Console.WriteLine, LogLevel.Warning));
 
 services.AddScoped<IBookRepository, BookRepository>();
 services.AddScoped<IOrderRepository, OrderRepository>();
@@ -38,6 +46,12 @@ services.AddScoped<IBookService, BookService>();
 services.AddScoped<IOrderService, OrderService>();
 
 var provider = services.BuildServiceProvider();
+
+using (var migrateScope = provider.CreateScope())
+{
+    var db = migrateScope.ServiceProvider.GetRequiredService<BookShopDbContext>();
+    db.Database.Migrate();
+}
 
 using var scope = provider.CreateScope();
 var bookService = scope.ServiceProvider.GetRequiredService<IBookService>();
@@ -55,18 +69,19 @@ var createdBook = await bookService.CreateBookAsync(new CreateBookDto
 });
 logger.LogInformation("Created: '{Title}' (ID: {Id})", createdBook.Title, createdBook.Id);
 
-logger.LogInformation("\nScenario 2: All Books (EF Core)");
+logger.LogInformation("Scenario 2: All Books (EF Core)");
 var allBooks = await bookService.GetAllBooksAsync();
 foreach (var book in allBooks)
     logger.LogInformation("  [{Id}] {Title} by {Author} — ${Price}",
         book.Id, book.Title, book.Author.FullName, book.Price);
 
-logger.LogInformation("\nScenario 3: Books via Dapper");
+logger.LogInformation("Scenario 3: Book List (Dapper)");
 var dapperBooks = await bookService.GetBooksDapperAsync();
 foreach (var b in dapperBooks)
-    logger.LogInformation("  {Title} ({AuthorName}) — ${Price}", b.Title, b.AuthorName, b.Price);
+    logger.LogInformation("  {Title} by {AuthorName} — ${Price}",
+        b.Title, b.AuthorName, b.Price);
 
-logger.LogInformation("\nScenario 4: Place Order");
+logger.LogInformation("Scenario 4: Place Order");
 try
 {
     var order = await orderService.PlaceOrderAsync(new CreateOrderDto
@@ -78,10 +93,10 @@ try
 }
 catch (InvalidOperationException ex)
 {
-    logger.LogWarning("Order failed: {Message}", ex.Message);
+    logger.LogWarning("Order rejected: {Reason}", ex.Message);
 }
 
-logger.LogInformation("\nScenario 5: Order Report (Dapper)");
+logger.LogInformation("Scenario 5: Order Report (Dapper)");
 var report = await orderService.GetOrderReportAsync();
 foreach (var row in report)
     logger.LogInformation("  Order #{Id} | {Email} | Total: ${Total:F2}",

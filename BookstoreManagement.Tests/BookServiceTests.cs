@@ -1,24 +1,30 @@
-﻿
-using Xunit;
+﻿using Xunit;
 using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.models;
 using exam_Ef_dapper_14_3.Services;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
+using FluentValidation;
+using FluentValidation.Results;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace BookstoreManagement.Tests;
 
 public class BookServiceTests
 {
-    private readonly Mock<IBookRepository> _bookRepoMock;
+    private readonly Mock<IBookRepository> _bookRepoMock = new();
+    private readonly Mock<IValidator<CreateBookDto>> _validatorMock = new();
+    private readonly Mock<ILogger<BookService>> _loggerMock = new();
     private readonly BookService _sut;
 
     public BookServiceTests()
     {
-        _bookRepoMock = new Mock<IBookRepository>();
-        _sut = new BookService(_bookRepoMock.Object, NullLogger<BookService>.Instance);
+        _validatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<CreateBookDto>(), default))
+            .ReturnsAsync(new ValidationResult());
+
+        _sut = new BookService(_bookRepoMock.Object, _validatorMock.Object, _loggerMock.Object);
     }
 
     [Fact]

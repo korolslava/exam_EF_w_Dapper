@@ -15,25 +15,29 @@ public class OrderRepository : IOrderRepository
 
     public async Task AddOrderAsync(Order order, List<OrderItem> items)
     {
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        var strategy = _context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
         {
-            _context.Orders.Add(order);
-            await _context.SaveChangesAsync();
-
-            foreach (var item in items)
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                item.OrderId = order.Id;
-                _context.OrderItems.Add(item);
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
+
+                foreach (var item in items)
+                {
+                    item.OrderId = order.Id;
+                    _context.OrderItems.Add(item);
+                }
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
             }
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
     }
 
     public async Task<IEnumerable<Order>> GetAllOrdersWithDetailsAsync() =>
@@ -55,7 +59,10 @@ public class OrderRepository : IOrderRepository
 
     public async Task<IEnumerable<OrderReportDto>> GetOrderReportDapperAsync()
     {
-        await using var connection = _context.Database.GetDbConnection();
+        var connection = _context.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await _context.Database.OpenConnectionAsync();
+
         const string sql = """
             SELECT   o.Id,
                      o.CustomerEmail,
