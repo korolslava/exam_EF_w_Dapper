@@ -2,12 +2,14 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using FluentValidation;
 
 using exam_Ef_dapper_14_3.data;
 using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.Repositories;
 using exam_Ef_dapper_14_3.Services;
+using exam_Ef_dapper_14_3.Validators;
 
 var configuration = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -22,8 +24,10 @@ services.AddLogging(builder =>
     builder.SetMinimumLevel(LogLevel.Information);
 });
 
-services.AddDbContext<BookShopDbContext>(options => cd BookstoreManagement.Tests
+services.AddScoped<IValidator<CreateBookDto>, CreateBookDtoValidator>();
+services.AddScoped<IValidator<CreateOrderDto>, CreateOrderDtoValidator>();
 
+services.AddDbContext<BookShopDbContext>(options =>
     options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
            .LogTo(Console.WriteLine, LogLevel.Warning));
 

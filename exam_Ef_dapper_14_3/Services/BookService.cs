@@ -3,26 +3,30 @@
 using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.models;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 
 public class BookService : IBookService
 {
     private readonly IBookRepository _bookRepo;
+    private readonly IValidator<CreateBookDto> _validator;
     private readonly ILogger<BookService> _logger;
 
-    public BookService(IBookRepository bookRepo, ILogger<BookService> logger)
+    public BookService(
+        IBookRepository bookRepo,
+        IValidator<CreateBookDto> validator,
+        ILogger<BookService> logger)
     {
         _bookRepo = bookRepo;
+        _validator = validator;
         _logger = logger;
     }
 
     public async Task<Book> CreateBookAsync(CreateBookDto dto)
     {
-        if (dto.Price <= 0)
-            throw new ArgumentException("Book price must be greater than zero.", nameof(dto.Price));
-
-        if (dto.StockQuantity < 0)
-            throw new ArgumentException("Stock quantity cannot be negative.", nameof(dto.StockQuantity));
+        var validation = await _validator.ValidateAsync(dto);
+        if (!validation.IsValid)
+            throw new ValidationException(validation.Errors);
 
         var allBooks = await _bookRepo.GetAllBooksAsync();
         var existingAuthor = allBooks

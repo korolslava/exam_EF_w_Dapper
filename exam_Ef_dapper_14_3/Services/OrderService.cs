@@ -3,39 +3,38 @@
 using exam_Ef_dapper_14_3.DTOs;
 using exam_Ef_dapper_14_3.Interfaces;
 using exam_Ef_dapper_14_3.models;
+using FluentValidation;
 using Microsoft.Extensions.Logging;
 
 public class OrderService : IOrderService
 {
     private readonly IOrderRepository _orderRepo;
     private readonly IBookRepository _bookRepo;
+    private readonly IValidator<CreateOrderDto> _validator;
     private readonly ILogger<OrderService> _logger;
 
     public OrderService(
         IOrderRepository orderRepo,
         IBookRepository bookRepo,
+        IValidator<CreateOrderDto> validator,
         ILogger<OrderService> logger)
     {
         _orderRepo = orderRepo;
         _bookRepo = bookRepo;
+        _validator = validator;
         _logger = logger;
     }
 
     public async Task<Order> PlaceOrderAsync(CreateOrderDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.CustomerEmail))
-            throw new ArgumentException("Customer email is required.", nameof(dto.CustomerEmail));
-
-        if (dto.Items.Count == 0)
-            throw new ArgumentException("An order must contain at least one item.", nameof(dto.Items));
+        var validation = await _validator.ValidateAsync(dto);
+        if (!validation.IsValid)
+            throw new ValidationException(validation.Errors);
 
         var orderItems = new List<OrderItem>();
 
         foreach (var (bookId, quantity) in dto.Items)
         {
-            if (quantity <= 0)
-                throw new ArgumentException($"Quantity for BookId {bookId} must be greater than zero.");
-
             var book = await _bookRepo.GetBookByIdAsync(bookId)
                        ?? throw new InvalidOperationException($"Book with ID {bookId} does not exist.");
 
