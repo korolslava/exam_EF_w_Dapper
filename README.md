@@ -70,7 +70,7 @@ The schema is configured via **Fluent API** to enforce data integrity at the SQL
 ## 📂 Project Structure
 
 ```
-exam_Ef_dapper_14_3/
+BookstoreManagement/
 ├── Data/
 │   ├── BookShopDbContext.cs          # DbContext with Fluent API configuration
 │   └── DesignTimeDbContextFactory.cs # Factory for EF CLI migrations

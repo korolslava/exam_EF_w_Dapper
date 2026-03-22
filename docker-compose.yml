@@ -19,7 +19,7 @@ services:
 
   app:
     build:
-      context: ./exam_Ef_dapper_14_3
+      context: ./BookstoreManagement
       dockerfile: Dockerfile
     container_name: bookstore_app
     depends_on:

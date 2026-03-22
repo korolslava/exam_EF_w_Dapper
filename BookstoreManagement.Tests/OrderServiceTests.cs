@@ -1,8 +1,8 @@
 ﻿using Xunit;
-using exam_Ef_dapper_14_3.DTOs;
-using exam_Ef_dapper_14_3.Interfaces;
-using exam_Ef_dapper_14_3.models;
-using exam_Ef_dapper_14_3.Services;
+using BookstoreManagement.DTOs;
+using BookstoreManagement.Interfaces;
+using BookstoreManagement.models;
+using BookstoreManagement.Services;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
